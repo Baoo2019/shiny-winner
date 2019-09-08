@@ -1,0 +1,81 @@
+#include <bits/stdc++.h>
+#include <opencv.hpp>
+using namespace std;
+using namespace cv;
+#define offset 100
+#ifndef Bao
+#define Bao
+
+
+int draw(Mat& frame, Mat& mask, const Mat& img, const Scalar& color, const int tag) {
+	Mat dstImg;
+	dstImg.create(frame.dims, frame.size, frame.type());
+	matchTemplate(mask, img, dstImg, 0, Mat());
+	normalize(dstImg, dstImg, 0, 1, 32);
+	Point minPoint;
+	Point maxPoint;
+	double* minVal = 0;
+	double* maxVal = 0;
+	minMaxLoc(dstImg, minVal, maxVal, &minPoint, &maxPoint);
+	minPoint.x += offset, minPoint.y += offset;
+	rectangle(frame, minPoint, Point(minPoint.x + img.cols - offset, minPoint.y + img.rows - offset), color, 2, 8);
+	return waitKey(1);
+}
+
+void edges(Mat& Img) {
+	Mat cpy, tmp;
+	medianBlur(Img, Img, 5);
+	cvtColor(Img, Img, COLOR_BGR2GRAY);
+	threshold(Img, Img, 40, 255, THRESH_BINARY);
+	morphologyEx(Img, Img, MORPH_OPEN, MORPH_CROSS);
+	/*
+	Mat img = Img.clone();
+	Img = Mat::zeros(img.size(), img.type());
+	vector<Vec4i> hierarchy;
+	vector<vector<Point>> contours;
+	findContours(img, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+	for (int i = 0; i < contours.size(); i++) {
+		Scalar color = Scalar(255, 255, 255);
+		drawContours(Img, contours, i, color, 2, 8, hierarchy, 0, Point());
+	}
+	*/
+	imshow("img", Img);// waitKey(0);
+}
+
+int main() {
+	Mat frame, sword, hammer;
+	VideoCapture cap;
+	VideoWriter writer;
+	cap.open("../cv/634085551380.avi");
+	cap >> frame;
+	if (!cap.isOpened())
+		printf("open failed");
+	Size size = Size(cap.get(CAP_PROP_FRAME_WIDTH), cap.get(CAP_PROP_FRAME_HEIGHT));
+	writer.open("../cv/lala.avi", (int)cap.get(CAP_PROP_FOURCC), (double)cap.get(CAP_PROP_FPS), size, true);
+	if (!writer.isOpened()) {
+		printf("failed");
+	}
+	sword = imread("../cv/sword.jpg");
+	hammer = imread("../cv/hammer.jpg");
+	if (sword.empty()||hammer.empty()) {
+		cout << "\n\nFALSE TO OPEN TEMPLATE!!!\n\n";
+	}
+	edges(sword);
+	edges(hammer);
+	while (cap.read(frame) && writer.isOpened()) {
+		Mat mask = frame.clone();
+		edges(mask);
+		draw(frame, mask, sword, Scalar(0, 255, 0), 0);
+		draw(frame, mask, hammer, Scalar(0, 255, 255), 0);
+		imshow("处理过", frame);
+		writer << frame;
+		writer << frame;
+		writer << frame;
+	}
+	//waitKey(0);
+	cap.release();
+	writer.release();
+	return 0;
+}
+
+#endif
